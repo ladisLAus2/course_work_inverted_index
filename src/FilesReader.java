@@ -4,18 +4,17 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class FilesReader {
-    private List<File> fileList = new ArrayList<>();
-    private InvertedIndex index = new InvertedIndex();
+    private final List<File> fileList = new ArrayList<>();
+    private final InvertedIndex index = new InvertedIndex();
     public FilesReader() {
     }
 
     public void readFilesFromDirectory(String path) {
         File directory = new File(path);
         if (directory.exists() && directory.isDirectory()) {
-            File files[] = directory.listFiles();
+            File[] files = directory.listFiles();
             if (files != null) {
                 for (File f : files) {
                     if (f.isDirectory()) {
@@ -28,6 +27,14 @@ public class FilesReader {
         } else {
             System.out.println("does not exist or not a directory");
         }
+    }
+
+    public List<File> getFileList() {
+        return fileList;
+    }
+
+    public InvertedIndex getIndex() {
+        return index;
     }
 
     public void readFileByIndex(int index) {
@@ -45,5 +52,6 @@ public class FilesReader {
             System.out.println("Invalid index");
         }
     }
+
 
 }

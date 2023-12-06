@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class InvertedIndex {
-    private Map<String, Set<String>> terms = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> terms = new ConcurrentHashMap<>();
 
     public InvertedIndex(){
 
@@ -57,7 +57,12 @@ public class InvertedIndex {
         for(File f : files){
             this.singleFileToTerms(f);
         }
+    }
 
+    public void addSomeFilesToTerms(List<File> files, Integer start, Integer end){
+        for(int i = start; i < end; i++){
+            this.singleFileToTerms(files.get(i));
+        }
     }
 
     @Override
