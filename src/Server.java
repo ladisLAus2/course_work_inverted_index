@@ -5,18 +5,41 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server implements Runnable{
 
-    private ArrayList<ClientHandler> clientsConnections;
+    private final ArrayList<ClientHandler> clientsConnections;
     private ServerSocket server;
     private boolean working;
     private ExecutorService threadPool;
+    private CompletableFuture<Void> future;
+    private FilesReader filesReader;
+    private ThreadPool poolForIndex;
     public Server(){
         clientsConnections = new ArrayList<>();
         working = false;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                future = CompletableFuture.runAsync(()->{
+                    filesReader = new FilesReader();
+                    poolForIndex = new ThreadPool(Runtime.getRuntime().availableProcessors(), filesReader.getIndex());
+                    filesReader.readFilesFromDirectory("aclImdb");
+                    poolForIndex.createInvertedIndexThreadPool(filesReader.getFileList());
+                    try {
+                        Thread.sleep(5000);
+                        System.out.println("ready");
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            }
+        }).start();
     }
 
     @Override
@@ -28,6 +51,7 @@ public class Server implements Runnable{
                 Socket client = server.accept();
                 ClientHandler clientHandler = new ClientHandler(client);
                 clientsConnections.add(clientHandler);
+
                 threadPool.execute(clientHandler);
             }
             } catch(IOException e){
@@ -51,10 +75,10 @@ public class Server implements Runnable{
     }
 
     class ClientHandler implements Runnable{
-        private Socket client;
+        private final Socket client;
         private BufferedReader in;
         private PrintWriter out;
-        private String name;
+
         public ClientHandler(Socket client){
             this.client = client;
         }
@@ -64,17 +88,34 @@ public class Server implements Runnable{
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 out = new PrintWriter(client.getOutputStream(), true);
                 out.println("Вітаю, як я можу до вас звертатися?");
-                name = in.readLine();
-
+                String name = in.readLine();
                 String text;
-                String word;
+
                 out.println(name + ", введіть, будь ласка, команду ('/help' для довідки)");
                 while((text = in.readLine()) != null){
                     if(text.startsWith("/find ")){
                         String [] receivedWord = text.split(" ", 2);
                         if(receivedWord.length == 2){
-                            word = receivedWord[1];
-                            out.println("Ви шукаєте слово \"" + word +"\".");
+                            String word = receivedWord[1];
+                            if(!future.isDone()){
+                                out.println("Зачекайте, будь ласка, йде підготовка.");
+                            }
+                            future.thenRun(()->{
+                                out.println("Ви шукаєте слово \"" + word +"\".");
+                                Set<String> result = poolForIndex.searchInvertedIndexThreadPool(word);
+                                if(result != null){
+                                    if(result.size() == 1){
+                                        out.println("Знайдений результат пошуку за словом " + word +" : " + result);
+                                    }else {
+                                        out.println("Знайдені результати пошуку за словом " + word + " : " + "{" + String.join(", ", result) + "}");
+
+                                    }
+                                }else {
+                                    out.println("За словом " + word + " не було знайдено нічого.");
+                                }
+                            });
+
+
                         }
                         else{
                             out.println("Слово не було надане.");
@@ -87,6 +128,7 @@ public class Server implements Runnable{
                     } else{
                         out.println("Ви ввели: " + text);
                     }
+                    out.println(name + ", введіть, будь ласка, команду: ");
                 }
             } catch (IOException e) {
                 shutdown();
