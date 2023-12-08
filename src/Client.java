@@ -4,18 +4,24 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class Client implements Runnable{
+public class Client implements Runnable {
     private Socket client;
     private BufferedReader in;
     private PrintWriter out;
     private boolean working;
-    public Client(){
 
+    public Client() {
+
+    }
+
+    public static void main(String[] args) {
+        Client client = new Client();
+        client.run();
     }
 
     @Override
     public void run() {
-        try{
+        try {
             client = new Socket("localhost", 1234);
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
             out = new PrintWriter(client.getOutputStream(), true);
@@ -23,51 +29,45 @@ public class Client implements Runnable{
             new Thread(handler).start();
 
             String inMessage;
-            while((inMessage = in.readLine()) != null){
+            while ((inMessage = in.readLine()) != null) {
                 System.out.println(inMessage);
             }
-        }catch(IOException e){
+        } catch (IOException e) {
             shutdown();
         }
     }
 
-    public void shutdown(){
-        try{
+    public void shutdown() {
+        try {
             working = true;
             in.close();
             out.close();
-            if(!client.isClosed()){
+            if (!client.isClosed()) {
                 client.close();
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             //
         }
     }
 
-    class Handler implements Runnable{
+    class Handler implements Runnable {
         @Override
         public void run() {
-            try{
+            try {
                 BufferedReader inRead = new BufferedReader(new InputStreamReader(System.in));
-                while(!working){
+                while (!working) {
                     String message = inRead.readLine();
-                    if(message.startsWith("/exit")){
+                    if (message.startsWith("/exit")) {
                         out.println("/exit");
                         inRead.close();
                         shutdown();
-                    }
-                    else{
+                    } else {
                         out.println(message);
                     }
                 }
-            }catch (IOException e){
+            } catch (IOException e) {
                 shutdown();
             }
         }
-    }
-
-    public static void main(String[] args) {
-        Client client = new Client();
-        client.run();
     }
 }

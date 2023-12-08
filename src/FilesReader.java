@@ -6,8 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FilesReader {
-    private final List<File> fileList = new ArrayList<>();
+    private final List<File> files = new ArrayList<>();
     private final InvertedIndex index = new InvertedIndex();
+
     public FilesReader() {
     }
 
@@ -20,17 +21,18 @@ public class FilesReader {
                     if (f.isDirectory()) {
                         readFilesFromDirectory(f.getPath());
                     } else {
-                        fileList.add(f);
+                        this.files.add(f);
                     }
                 }
             }
         } else {
             System.out.println("does not exist or not a directory");
         }
+
     }
 
-    public List<File> getFileList() {
-        return fileList;
+    public List<File> getFiles() {
+        return files;
     }
 
     public InvertedIndex getIndex() {
@@ -38,8 +40,8 @@ public class FilesReader {
     }
 
     public void readFileByIndex(int index) {
-        if (index >= 0 && index < fileList.size()) {
-            File file = fileList.get(index);
+        if (index >= 0 && index < files.size()) {
+            File file = files.get(index);
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -52,6 +54,5 @@ public class FilesReader {
             System.out.println("Invalid index");
         }
     }
-
 
 }
