@@ -1,17 +1,15 @@
+package custom;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
-public class InvertedIndex {
-    private final Map<String, Set<String>> terms = new ConcurrentHashMap<>();
+public class CustomInvertedIndex {
+    private final CustomConcurrentMap<String, String> map = new CustomConcurrentMap<>();
 
-    public InvertedIndex() {
+    public CustomInvertedIndex() {
 
     }
 
@@ -21,15 +19,17 @@ public class InvertedIndex {
     }
 
     public void addPairToTerms(String word, String fileName) {
-        terms.computeIfAbsent(word, (n) -> ConcurrentHashMap.newKeySet()).add(fileName);
+        map.put(word, fileName);
     }
 
     public Set<String> getDocumentIndexByWord(String word) {
-        return terms.get(word);
+        Set<String> words = map.get(word);
+        return words;
     }
 
-    public Map<String, Set<String>> getTerms() {
-        return terms;
+
+    public CustomConcurrentMap<String, String> getMap() {
+        return map;
     }
 
     public void singleFileToTerms(File file) {
@@ -45,7 +45,7 @@ public class InvertedIndex {
         String cleanedText = text.toString().replaceAll("<br /><br />", "").toLowerCase();
         String[] splitted = cleanedText.split("\\s*[^a-zA-Z]+\\s*");
 
-        List<String> validWords = Arrays.stream(splitted).filter(InvertedIndex::isNotForbiddenWord).toList();
+        List<String> validWords = Arrays.stream(splitted).filter(CustomInvertedIndex::isNotForbiddenWord).toList();
 
         for (String w : validWords) {
             this.addPairToTerms(w, file.toString());
@@ -63,6 +63,7 @@ public class InvertedIndex {
         for (int i = start; i < end; i++) {
             this.singleFileToTerms(files.get(i));
         }
+        System.out.println(map.size());
     }
 
 }

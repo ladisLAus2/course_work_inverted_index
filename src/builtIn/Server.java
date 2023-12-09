@@ -1,3 +1,5 @@
+package builtIn;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -46,7 +48,7 @@ public class Server implements Runnable {
             server.buildIndexOneTime(16);
             server.run();
         } else {
-            System.out.println("Ви вибрали 2 режим - режим для тестування часу виконання побудови інвертованого індексу різною кількістю потоків.");
+            System.out.println("Ви вибрали 2 режим - режим для тестування часу виконання побудови різною кількістю потоків.");
             List<Integer> cores = new ArrayList<>(Arrays.asList(1, 2, 4, 8, 12, 16, 24, 32, 48, 96));
             server.buildAndTestIndexMultipleNumbersOfThreads(cores);
         }
@@ -70,6 +72,7 @@ public class Server implements Runnable {
 //                    } catch (InterruptedException e) {
 //                        throw new RuntimeException(e);
 //                    }
+
                     System.out.println("Індекс створено.");
                 });
             }

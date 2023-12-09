@@ -1,3 +1,5 @@
+package custom;
+
 import java.io.File;
 import java.util.List;
 import java.util.Set;
@@ -6,13 +8,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-public class ThreadPool {
+public class CustomThreadPool {
     private final ExecutorService buildIndexThreadPool;
     private final ExecutorService searchIndexThreadPool;
     private final Integer numCPU;
-    private final InvertedIndex index;
+    private final CustomInvertedIndex index;
 
-    public ThreadPool(Integer numCPU, InvertedIndex index) {
+    public CustomThreadPool(Integer numCPU, CustomInvertedIndex index) {
         this.numCPU = numCPU;
         buildIndexThreadPool = Executors.newFixedThreadPool(numCPU);
         searchIndexThreadPool = Executors.newCachedThreadPool();
@@ -38,6 +40,7 @@ public class ThreadPool {
         }
         long end = System.nanoTime();
         return end - start;
+
     }
 
     public Set<String> searchInvertedIndexThreadPool(String word) {
