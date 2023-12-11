@@ -1,9 +1,11 @@
-package builtIn;
+import components.FilesReader;
+import components.ThreadPool;
+import components.concurrentMap.BuiltInConcurrentHashMapUse;
+import components.concurrentMap.ConcurrentHashMapInterface;
+import components.concurrentMap.CustomConcurrentHashMapUse;
+import components.InvertedIndex;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -19,9 +21,9 @@ public class Server implements Runnable {
     private ExecutorService threadPool;
     private CompletableFuture<Void> future;
     private FilesReader filesReader;
-
+    private InvertedIndex index;
     private ThreadPool poolForIndex;
-
+    private final int port = 1234;
 
     public Server() {
         clientsConnections = new ArrayList<>();
@@ -29,43 +31,58 @@ public class Server implements Runnable {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-        int userInput;
+        int selectedMode, selectedImplementation;
+        do {
+            System.out.println("Яку імплементацію ви бажаєте використати (1 - На built-in ConcurrentHashMap; 2 - На власній реалізації ConcurrentHashMap):");
+            while (!scanner.hasNextInt()) {
+                System.out.println("Отримане значення не є числом. Спробуйте знову");
+                scanner.next();
+            }
+            selectedImplementation = scanner.nextInt();
+            if (selectedImplementation != 1 && selectedImplementation != 2) {
+                System.out.println("Введіть або 1 або 2.");
+            }
+        } while (selectedImplementation != 1 && selectedImplementation != 2);
         do {
             System.out.println("Введіть режим роботи (1 - Робочий режим; 2 - режим для підрахунку часу виконання різною кількістю потоків):");
             while (!scanner.hasNextInt()) {
                 System.out.println("Отримане значення не є числом. Спробуйте знову");
                 scanner.next();
             }
-            userInput = scanner.nextInt();
-            if (userInput != 1 && userInput != 2) {
+            selectedMode = scanner.nextInt();
+            if (selectedMode != 1 && selectedMode != 2) {
                 System.out.println("Введіть або 1 або 2.");
             }
-        } while (userInput != 1 && userInput != 2);
-        scanner.close();
+        } while (selectedMode != 1 && selectedMode != 2);
         Server server = new Server();
-        if (userInput == 1) {
+
+        if (selectedMode == 1) {
             System.out.println("Ви вибрали Робочий режим. Створюю індекс...");
-            server.buildIndexOneTime(16);
+            if (selectedImplementation == 1) {
+                server.buildIndexOneTime(16, new BuiltInConcurrentHashMapUse<String, Set<String>>());
+            } else {
+                server.buildIndexOneTime(16, new CustomConcurrentHashMapUse<String, Set<String>>());
+            }
             server.run();
         } else {
             System.out.println("Ви вибрали 2 режим - режим для тестування часу виконання побудови різною кількістю потоків.");
             List<Integer> cores = new ArrayList<>(Arrays.asList(1, 2, 4, 8, 12, 16, 24, 32, 48, 96));
-            server.buildAndTestIndexMultipleNumbersOfThreads(cores);
+            if (selectedImplementation == 1) {
+                server.buildAndTestIndexMultipleNumbersOfThreads(cores, BuiltInConcurrentHashMapUse.class);
+            } else {
+                server.buildAndTestIndexMultipleNumbersOfThreads(cores, CustomConcurrentHashMapUse.class);
+            }
         }
-
 
     }
 
-    public void buildIndexOneTime(int cores) {
-        working = false;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                future = CompletableFuture.runAsync(() -> {
-                    filesReader = new FilesReader();
-                    poolForIndex = new ThreadPool(cores, filesReader.getIndex());
-                    filesReader.readFilesFromDirectory("aclImdb");
-                    long time = poolForIndex.createInvertedIndexThreadPool(filesReader.getFiles());
+    public void buildIndexOneTime(int cores, ConcurrentHashMapInterface<String, Set<String>> map) {
+        new Thread(() -> future = CompletableFuture.runAsync(() -> {
+            index = new InvertedIndex(map);
+            filesReader = new FilesReader();
+            poolForIndex = new ThreadPool(cores, index);
+            filesReader.readFilesFromDirectory("aclImdb");
+            poolForIndex.createInvertedIndexThreadPool(filesReader.getFiles());
 //                    try {
 //                        Thread.sleep(15000);
 //                        System.out.println("ready");
@@ -73,36 +90,50 @@ public class Server implements Runnable {
 //                        throw new RuntimeException(e);
 //                    }
 
-                    System.out.println("Індекс створено.");
-                });
-            }
-        }).start();
+            System.out.println("Індекс створено.");
+        })).start();
     }
 
-    public void buildAndTestIndexMultipleNumbersOfThreads(List<Integer> cores) {
+    public void buildAndTestIndexMultipleNumbersOfThreads(List<Integer> cores, Class mapClass) {
         for (int i = 0; i < cores.size(); i++) {
-            FilesReader filesReader = new FilesReader();
-            ThreadPool poolForIndex = new ThreadPool(cores.get(i), filesReader.getIndex());
+            ConcurrentHashMapInterface<String, Set<String>> map;
+            try {
+                map = (ConcurrentHashMapInterface<String, Set<String>>) mapClass.newInstance();
+            } catch (InstantiationException e) {
+                throw new RuntimeException(e);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+            index = new InvertedIndex(map);
+            filesReader = new FilesReader();
+            poolForIndex = new ThreadPool(cores.get(i), index);
             filesReader.readFilesFromDirectory("aclImdb");
             long time = poolForIndex.createInvertedIndexThreadPool(filesReader.getFiles());
-
-            if (cores.size() != 1) {
-                System.out.println("Результат: " + cores.get(i) + " ядер дорівнює - " + time);
-            }
-
+            System.out.println("Результат: " + cores.get(i) + " ядер дорівнює - " + time);
         }
     }
 
     @Override
     public void run() {
-        try {
-            server = new ServerSocket(1234);
+        try (Scanner scanner = new Scanner(System.in)) {
+            server = new ServerSocket(port);
             threadPool = Executors.newCachedThreadPool();
+            new Thread(() -> {
+                while (scanner.hasNextLine()) {
+                    String line = scanner.nextLine();
+                    if (line.equals("/shutdown")) {
+                        System.out.println("Ви ввели команду для закриття серверу. Сервер закривається...");
+                        shutdown();
+                        break;
+                    } else {
+                        System.out.println("Невідома команда " + line + ". Введіть іншу команду. ");
+                    }
+                }
+            }).start();
             while (!working) {
                 Socket client = server.accept();
                 ClientHandler clientHandler = new ClientHandler(client);
                 clientsConnections.add(clientHandler);
-
                 threadPool.execute(clientHandler);
             }
         } catch (IOException e) {
@@ -120,6 +151,8 @@ public class Server implements Runnable {
             for (ClientHandler clientHandler : clientsConnections) {
                 clientHandler.shutdown();
             }
+            threadPool.shutdown();
+            poolForIndex.shutdown();
         } catch (Exception e) {
             //nothing
         }
@@ -159,7 +192,7 @@ public class Server implements Runnable {
                                 if (result.size() == 1) {
                                     out.println("Знайдений результат пошуку за словом " + word + " : " + result);
                                 } else {
-                                    out.println("Знайденo " + result.size()+" результатів за словом " + word + " : " + "{" + String.join(", ", result) + "}");
+                                    out.println("Знайденo " + result.size() + " результатів за словом " + word + " : " + "{" + String.join(", ", result) + "}");
 
                                 }
                             } else {
@@ -184,7 +217,9 @@ public class Server implements Runnable {
         }
 
         public void shutdown() {
+
             try {
+                out.println("/shutdown");
                 in.close();
                 out.close();
                 if (!client.isClosed()) {

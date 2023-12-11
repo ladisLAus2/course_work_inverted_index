@@ -1,4 +1,4 @@
-package custom;
+package components;
 
 import java.io.File;
 import java.util.List;
@@ -8,29 +8,26 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-public class CustomThreadPool {
+public class ThreadPool {
     private final ExecutorService buildIndexThreadPool;
     private final ExecutorService searchIndexThreadPool;
-    private final Integer numCPU;
-    private final CustomInvertedIndex index;
+    private final Integer cores;
+    private final InvertedIndex index;
 
-    public CustomThreadPool(Integer numCPU, CustomInvertedIndex index) {
-        this.numCPU = numCPU;
-        buildIndexThreadPool = Executors.newFixedThreadPool(numCPU);
+    public ThreadPool(Integer cores, InvertedIndex index) {
+        this.cores = cores;
+        buildIndexThreadPool = Executors.newFixedThreadPool(cores);
         searchIndexThreadPool = Executors.newCachedThreadPool();
         this.index = index;
     }
 
     public long createInvertedIndexThreadPool(List<File> files) {
         long start = System.nanoTime();
-        int filesPerThread = files.size() / numCPU;
-        for (int i = 0; i < numCPU; i++) {
-            int fi = i;
-            if (i == numCPU - 1) {
-                buildIndexThreadPool.execute(() -> index.addSomeFilesToTerms(files, filesPerThread * fi, files.size()));
-                break;
-            }
-            buildIndexThreadPool.execute(() -> index.addSomeFilesToTerms(files, filesPerThread * fi, filesPerThread * (fi + 1)));
+        int filesPerThread = files.size() / cores;
+        for (int i = 0; i < cores; i++) {
+            int startI = filesPerThread * i;
+            int endI = (i == cores - 1) ? files.size() : filesPerThread * (i + 1);
+            buildIndexThreadPool.execute(() -> index.addSomeFilesToTerms(files, startI, endI));
         }
         buildIndexThreadPool.shutdown();
         try {
@@ -44,7 +41,7 @@ public class CustomThreadPool {
     }
 
     public Set<String> searchInvertedIndexThreadPool(String word) {
-        Future<Set<String>> future = searchIndexThreadPool.submit(() -> (index.getDocumentIndexByWord(word)));
+        Future<Set<String>> future = searchIndexThreadPool.submit(() -> (index.getDocumentNameByWord(word)));
 
         Set<String> result;
         try {
@@ -53,5 +50,9 @@ public class CustomThreadPool {
             throw new RuntimeException(e);
         }
         return result;
+    }
+    public void shutdown(){
+        this.buildIndexThreadPool.shutdownNow();
+        this.searchIndexThreadPool.shutdownNow();
     }
 }

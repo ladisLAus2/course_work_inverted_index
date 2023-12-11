@@ -1,16 +1,18 @@
-package custom;
+package components.concurrentMap;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 
-class CustomHashMap<K,V>{
-    private LinkedList<Node<K,V>> [] list;
+public class CustomHashMap<K,V>{
+    private ArrayList<Node<K,V>> [] list;
     private int size;
-    private float max_load;
+    private final float max_load;
+
     public CustomHashMap(){
         this(16,0.8f);//default value
     }
+
     public CustomHashMap(int capacity, float max_load){
-        this.list = new LinkedList[capacity];
+        this.list = new ArrayList[capacity];
         this.size = 0;
         this.max_load = max_load;
     }
@@ -36,7 +38,7 @@ class CustomHashMap<K,V>{
         }
         int i = getIndex(key);
         if(list[i] == null){
-            list[i] = new LinkedList<>();
+            list[i] = new ArrayList<>();
         }
         for(var node : list[i]){
             if(node.getKey().equals(key)){
@@ -50,47 +52,27 @@ class CustomHashMap<K,V>{
             resize();
         }
     }
+    public V computeIfAbsent(K key, ValueProvider<K, V> valueProvider) {
+        int i = getIndex(key);
+        if (list[i] != null) {
+            for (Node<K, V> node : list[i]) {
+                if (node.getKey().equals(key)) {
+                    return node.getValue();
+                }
+            }
+        }
 
-    public V computeIfAbsent(K key, ValueProvider<K,V> valueProvider) throws Exception {
-        if(key == null || valueProvider == null){
-            throw new Exception("key or valueProvider is null");
-        }
-        int i = getIndex(key);
-        if(list[i] == null){
-            list[i] = new LinkedList<>();
-        }
-        for(var node : list[i]){
-            if(node.getKey().equals(key)){
-                return node.getValue();
+        V computedValue = valueProvider.compute(key);
+
+        if (computedValue != null) {
+            try {
+                put(key, computedValue);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
-        V value = valueProvider.compute(key);
-        list[i].add(new Node<>(key, value));
-        size++;
-        if(size > list.length * max_load){
-            resize();
-        }
-        return value;
-    }
-    public V putIfAbsent(K key, V value) throws Exception {
-        if(key == null){
-            throw new Exception("key is null");
-        }
-        int i = getIndex(key);
-        if(list[i] == null){
-            list[i] = new LinkedList<>();
-        }
-        for(var node : list[i]){
-            if(node.getKey().equals(key)){
-                return node.getValue();
-            }
-        }
-        list[i].add(new Node<>(key,value));
-        size++;
-        if(size > list.length * max_load){
-            resize();
-        }
-        return value;
+
+        return computedValue;
     }
 
     private int getIndex(K key){
@@ -101,13 +83,13 @@ class CustomHashMap<K,V>{
     }
     private void resize(){
         int newSize = list.length * 2;
-        LinkedList<Node<K,V>> [] newList = new LinkedList[newSize];
+        ArrayList<Node<K,V>> [] newList = new ArrayList[newSize];
         for(var listValue : list){
             if(listValue != null){
                 for(var node : listValue){
                     int newIndex = Math.abs(node.getKey().hashCode()) % newSize;
                     if(newList[newIndex] == null){
-                        newList[newIndex] = new LinkedList<>();
+                        newList[newIndex] = new ArrayList<>();
                     }
                     newList[newIndex].add(node);
                 }
@@ -120,8 +102,8 @@ class CustomHashMap<K,V>{
         V compute(K key);
     }
 
-    private class Node<K,V>{
-        private K key;
+    private static class Node<K,V>{
+        private final K key;
         private V value;
 
         public Node(K key, V value){

@@ -1,4 +1,6 @@
-package custom;
+package components;
+
+import components.concurrentMap.ConcurrentHashMapInterface;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -6,29 +8,28 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
-public class CustomInvertedIndex {
-    private final CustomConcurrentMap<String, String> map = new CustomConcurrentMap<>();
+public class InvertedIndex  {
+    private final ConcurrentHashMapInterface<String,Set<String>> map;
 
-    public CustomInvertedIndex() {
-
+    public InvertedIndex(ConcurrentHashMapInterface<String,Set<String>> map) {
+        this.map = map;
     }
 
     private static boolean isNotForbiddenWord(String word) {
         List<String> forbiddenWords = Arrays.asList("a", "i", "the", "is", "are");
-        return !forbiddenWords.contains(word) && word.length() > 2;
+        return !forbiddenWords.contains(word) && word.length() > 2; //містить більш ніж 2 літери в слові
     }
 
-    public void addPairToTerms(String word, String fileName) {
-        map.put(word, fileName);
+    public void addPairToMap(String word, String fileName) {
+        map.putIfAbsent(word, new HashSet<>());
+        map.get(word).add(fileName);
     }
 
-    public Set<String> getDocumentIndexByWord(String word) {
-        Set<String> words = map.get(word);
-        return words;
+    public Set<String> getDocumentNameByWord(String word) {
+        return map.get(word);
     }
 
-
-    public CustomConcurrentMap<String, String> getMap() {
+    public ConcurrentHashMapInterface<String, Set<String>> getMap() {
         return map;
     }
 
@@ -45,12 +46,12 @@ public class CustomInvertedIndex {
         String cleanedText = text.toString().replaceAll("<br /><br />", "").toLowerCase();
         String[] splitted = cleanedText.split("\\s*[^a-zA-Z]+\\s*");
 
-        List<String> validWords = Arrays.stream(splitted).filter(CustomInvertedIndex::isNotForbiddenWord).toList();
+        List<String> validWords = Arrays.stream(splitted).filter(InvertedIndex::isNotForbiddenWord).toList();
 
         for (String w : validWords) {
-            this.addPairToTerms(w, file.toString());
+            this.addPairToMap(w, file.toString());
         }
-        validWords.toArray(new String[0]);
+//        System.out.println(map.size());
     }
 
     public void allFilesToTerms(List<File> files) {
@@ -63,7 +64,6 @@ public class CustomInvertedIndex {
         for (int i = start; i < end; i++) {
             this.singleFileToTerms(files.get(i));
         }
-        System.out.println(map.size());
     }
 
 }
