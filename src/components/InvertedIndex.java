@@ -19,7 +19,7 @@ public class InvertedIndex  {
 
     private static boolean isNotForbiddenWord(String word) {
         List<String> forbiddenWords = Arrays.asList("a", "i", "the", "is", "are");
-        return !forbiddenWords.contains(word) && word.length() > 2; //містить більш ніж 2 літери в слові
+        return !forbiddenWords.contains(word) && word.length() > 2; //word must contain more than 2 letters
     }
 
     public void addPairToMap(String word, String fileName) {

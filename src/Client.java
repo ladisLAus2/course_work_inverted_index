@@ -42,7 +42,7 @@ public class Client implements Runnable {
             String inMessage;
             while ((inMessage = in.readLine()) != null) {
                 if (inMessage.startsWith("/shutdown")) {
-                    System.out.println("Сервер несподівано завершив роботу. З'єднання розірване. Введіть, будь-що для припинення роботи клієнта. ");
+                    System.out.println("The server has unexpectedly shut down. The connection is disconnected. Enter anything to terminate the client. ");
                     shutdown();
                     break;
                 } else {

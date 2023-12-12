@@ -33,39 +33,39 @@ public class Server implements Runnable {
         Scanner scanner = new Scanner(System.in);
         int selectedMode, selectedImplementation;
         do {
-            System.out.println("Яку імплементацію ви бажаєте використати (1 - На built-in ConcurrentHashMap; 2 - На власній реалізації ConcurrentHashMap):");
+            System.out.println("What implementation would you like to use (1 - Built-in ConcurrentHashMap; 2 - Custom ConcurrentHashMap):");
             while (!scanner.hasNextInt()) {
-                System.out.println("Отримане значення не є числом. Спробуйте знову");
+                System.out.println("Given value is not a number. Try again.");
                 scanner.next();
             }
             selectedImplementation = scanner.nextInt();
             if (selectedImplementation != 1 && selectedImplementation != 2) {
-                System.out.println("Введіть або 1 або 2.");
+                System.out.println("Enter either 1 or 2.");
             }
         } while (selectedImplementation != 1 && selectedImplementation != 2);
         do {
-            System.out.println("Введіть режим роботи (1 - Робочий режим; 2 - режим для підрахунку часу виконання різною кількістю потоків):");
+            System.out.println("Enter work mode (1 - Work mode; 2 - Mode to calculate time building inverted index with different amount of cores):");
             while (!scanner.hasNextInt()) {
-                System.out.println("Отримане значення не є числом. Спробуйте знову");
+                System.out.println("Given value is not a number. Try again");
                 scanner.next();
             }
             selectedMode = scanner.nextInt();
             if (selectedMode != 1 && selectedMode != 2) {
-                System.out.println("Введіть або 1 або 2.");
+                System.out.println("Enter either 1 or 2.");
             }
         } while (selectedMode != 1 && selectedMode != 2);
         Server server = new Server();
 
         if (selectedMode == 1) {
-            System.out.println("Ви вибрали Робочий режим. Створюю індекс...");
+            System.out.println("You have chosen WORK MODE. Creating inverted index...");
             if (selectedImplementation == 1) {
-                server.buildIndexOneTime(16, new BuiltInConcurrentHashMapUse<String, Set<String>>());
+                server.buildIndexOneTime(16, new BuiltInConcurrentHashMapUse<>());
             } else {
-                server.buildIndexOneTime(16, new CustomConcurrentHashMapUse<String, Set<String>>());
+                server.buildIndexOneTime(16, new CustomConcurrentHashMapUse<>());
             }
             server.run();
         } else {
-            System.out.println("Ви вибрали 2 режим - режим для тестування часу виконання побудови різною кількістю потоків.");
+            System.out.println("You have chosen the second mode - Mode to calculate time building inverted index with different amount of cores.");
             List<Integer> cores = new ArrayList<>(Arrays.asList(1, 2, 4, 8, 12, 16, 24, 32, 48, 96));
             if (selectedImplementation == 1) {
                 server.buildAndTestIndexMultipleNumbersOfThreads(cores, BuiltInConcurrentHashMapUse.class);
@@ -89,7 +89,7 @@ public class Server implements Runnable {
 //            } catch (InterruptedException e) {
 //                throw new RuntimeException(e);
 //            }
-            System.out.println("Індекс створено.");
+            System.out.println("Index has been built.");
         })).start();
     }
 
@@ -108,7 +108,7 @@ public class Server implements Runnable {
             poolForIndex = new ThreadPool(cores.get(i), index);
             filesReader.readFilesFromDirectory("aclImdb");
             long time = poolForIndex.createInvertedIndexThreadPool(filesReader.getFiles());
-            System.out.println("Результат: " + cores.get(i) + " ядер дорівнює - " + time);
+            System.out.println("Result: " + cores.get(i) + " cores - " + time);
         }
     }
 
@@ -121,11 +121,11 @@ public class Server implements Runnable {
                 while (scanner.hasNextLine()) {
                     String line = scanner.nextLine();
                     if (line.equals("/shutdown")) {
-                        System.out.println("Ви ввели команду для закриття серверу. Сервер закривається...");
+                        System.out.println("You have entered command to shutdown the server. Server is being closed...");
                         shutdown();
                         break;
                     } else {
-                        System.out.println("Невідома команда " + line + ". Введіть іншу команду. ");
+                        System.out.println("Unknown command " + line + ". Enter another command. ");
                     }
                 }
             }).start();
@@ -171,44 +171,44 @@ public class Server implements Runnable {
             try {
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 out = new PrintWriter(client.getOutputStream(), true);
-                out.println("Вітаю, як я можу до вас звертатися?");
+                out.println("Greetings, what's your name?");
                 String name = in.readLine();
                 String text;
 
-                out.println(name + ", введіть, будь ласка, команду ('/help' для довідки)");
+                out.println(name + ", enter, please, command ('/help' for help)");
                 while ((text = in.readLine()) != null) {
                     if (text.startsWith("/find ")) {
                         String[] receivedWord = text.split(" ", 2);
                         if (receivedWord.length == 2) {
                             String word = receivedWord[1];
                             if (!future.isDone()) {
-                                out.println("Зачекайте, будь ласка, йде підготовка.");
+                                out.println("Wait, please, preparations are underway.");
                             }
                             future.join();
-                            out.println("Ви шукаєте слово \"" + word + "\".");
+                            out.println("You are looking for a word \"" + word + "\".");
                             Set<String> result = poolForIndex.searchInvertedIndexThreadPool(word);
                             if (result != null) {
                                 if (result.size() == 1) {
-                                    out.println("Знайдений результат пошуку за словом " + word + " : " + result);
+                                    out.println("Search result for a word " + word + " : " + result);
                                 } else {
-                                    out.println("Знайденo " + result.size() + " результатів за словом " + word + " : " + "{" + String.join(", ", result) + "}");
+                                    out.println("Found " + result.size() + " results for a word " + word + " : " + "{" + String.join(", ", result) + "}");
 
                                 }
                             } else {
-                                out.println("За словом " + word + " не було знайдено нічого.");
+                                out.println("For a word " + word + " nothing was found.");
                             }
                         } else {
-                            out.println("Слово не було надане.");
+                            out.println("A word was not given.");
                         }
                     } else if (text.startsWith("/exit")) {
-                        out.println("Ви ввели команду для припинення зв'язку з сервером");
+                        out.println("You entered a command to terminate communication with the server");
                         shutdown();
                     } else if (text.startsWith("/help")) {
-                        out.println("Для знаходження слова введіть команду /find + слово.\nДля виходу введіть /exit");
+                        out.println("To find a word, enter the command /find + word.\nTo exit, enter /exit");
                     } else {
-                        out.println("Ви ввели: " + text);
+                        out.println("You entered: " + text);
                     }
-                    out.println(name + ", введіть, будь ласка, наступну команду: ");
+                    out.println(name + ", please enter the following command: ");
                 }
             } catch (IOException e) {
                 shutdown();
