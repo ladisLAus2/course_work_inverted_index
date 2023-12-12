@@ -7,11 +7,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class InvertedIndex  {
-    private final ConcurrentHashMapInterface<String,Set<String>> map;
+    private final ConcurrentHashMapInterface<String, Set<String>> map;
 
-    public InvertedIndex(ConcurrentHashMapInterface<String,Set<String>> map) {
+    public InvertedIndex(ConcurrentHashMapInterface<String, Set<String>> map) {
         this.map = map;
     }
 
@@ -21,8 +23,8 @@ public class InvertedIndex  {
     }
 
     public void addPairToMap(String word, String fileName) {
-        map.putIfAbsent(word, new HashSet<>());
-        map.get(word).add(fileName);
+        map.computeIfAbsent(word,k -> new HashSet<>()).add(fileName);
+        //map.get(word).add(fileName);
     }
 
     public Set<String> getDocumentNameByWord(String word) {
@@ -46,7 +48,9 @@ public class InvertedIndex  {
         String cleanedText = text.toString().replaceAll("<br /><br />", "").toLowerCase();
         String[] splitted = cleanedText.split("\\s*[^a-zA-Z]+\\s*");
 
-        List<String> validWords = Arrays.stream(splitted).filter(InvertedIndex::isNotForbiddenWord).toList();
+        List<String> validWords = Arrays.stream(splitted)
+                .filter(InvertedIndex::isNotForbiddenWord)
+                .collect(Collectors.toList());
 
         for (String w : validWords) {
             this.addPairToMap(w, file.toString());

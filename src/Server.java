@@ -83,13 +83,12 @@ public class Server implements Runnable {
             poolForIndex = new ThreadPool(cores, index);
             filesReader.readFilesFromDirectory("aclImdb");
             poolForIndex.createInvertedIndexThreadPool(filesReader.getFiles());
-//                    try {
-//                        Thread.sleep(15000);
-//                        System.out.println("ready");
-//                    } catch (InterruptedException e) {
-//                        throw new RuntimeException(e);
-//                    }
-
+//            try {
+//                Thread.sleep(30000);
+//                System.out.println("ready");
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
             System.out.println("Індекс створено.");
         })).start();
     }

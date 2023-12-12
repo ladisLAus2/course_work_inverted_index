@@ -1,6 +1,7 @@
 package components.concurrentMap;
 
 import java.util.ArrayList;
+import java.util.function.Function;
 
 public class CustomHashMap<K,V>{
     private ArrayList<Node<K,V>> [] list;
@@ -40,7 +41,7 @@ public class CustomHashMap<K,V>{
         if(list[i] == null){
             list[i] = new ArrayList<>();
         }
-        for(var node : list[i]){
+        for(Node<K, V> node : list[i]){
             if(node.getKey().equals(key)){
                 node.setValue(value);
                 return;
@@ -52,7 +53,7 @@ public class CustomHashMap<K,V>{
             resize();
         }
     }
-    public V computeIfAbsent(K key, ValueProvider<K, V> valueProvider) {
+    public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
         int i = getIndex(key);
         if (list[i] != null) {
             for (Node<K, V> node : list[i]) {
@@ -62,7 +63,7 @@ public class CustomHashMap<K,V>{
             }
         }
 
-        V computedValue = valueProvider.compute(key);
+        V computedValue = mappingFunction.apply(key);
 
         if (computedValue != null) {
             try {
@@ -84,9 +85,9 @@ public class CustomHashMap<K,V>{
     private void resize(){
         int newSize = list.length * 2;
         ArrayList<Node<K,V>> [] newList = new ArrayList[newSize];
-        for(var listValue : list){
+        for(ArrayList<Node<K, V>> listValue : list){
             if(listValue != null){
-                for(var node : listValue){
+                for(Node<K, V> node : listValue){
                     int newIndex = Math.abs(node.getKey().hashCode()) % newSize;
                     if(newList[newIndex] == null){
                         newList[newIndex] = new ArrayList<>();
@@ -97,10 +98,7 @@ public class CustomHashMap<K,V>{
         }
         list = newList;
     }
-    @FunctionalInterface
-    public interface ValueProvider<K, V> {
-        V compute(K key);
-    }
+
 
     private static class Node<K,V>{
         private final K key;
